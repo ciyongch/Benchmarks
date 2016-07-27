@@ -5,9 +5,8 @@ import theano
 import theano.tensor as T
 #from pylearn2.expr.normalize import CrossChannelNormalization
 
-# Jinlong added
 from theano.tensor.signal import downsample, norm
-from theano.tensor.nnet import conv
+from theano.tensor.nnet import conv2d
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -89,12 +88,14 @@ class ConvPoolLayer(object):
         self.lrn = lrn
         assert group in [1, 2]
 
-        self.filter_shape = np.asarray(filter_shape)
-        self.image_shape = np.asarray(image_shape)
+        #self.filter_shape = np.asarray(filter_shape)
+        #self.image_shape = np.asarray(image_shape)
+        self.filter_shape = tuple(filter_shape)
+        self.image_shape = tuple(image_shape)
 
         if self.lrn:
             #self.lrn_func = CrossChannelNormalization()
-            normOp = norm.NormAcrossMap(a=1e-4, b=0.75, N=5)
+            normOp = norm.NormAcrossMap(alpha=1e-4, beta=0.75, n=5)
 
         if group == 1:
             self.W = Weight(self.filter_shape)
@@ -109,33 +110,33 @@ class ConvPoolLayer(object):
             self.b1 = Weight(self.filter_shape[0], bias_init, std=0)
 
         if group == 1:
-            conv_out = conv.conv2d( input=input,
-                                    filters=self.W.val,
-                                    filter_shape=self.filter_shape, 
-                                    image_shape=self.image_shape,
-                                    subsample=(convstride, convstride),
-                                    pad=padsize,
-                                    )
+            conv_out = conv2d(input=input,
+                              filters=self.W.val,
+                              filter_shape=self.filter_shape, 
+                              input_shape=self.image_shape,
+                              subsample=(convstride, convstride),
+                              border_mode=padsize,
+                              )
             conv_out = conv_out + self.b.val.dimshuffle('x', 0, 'x', 'x')
         else:
             conv_out0 = \
-                conv.conv2d(input=input[:, :self.channel / 2, :, :],
-                            filters=self.W0.val,
-                            filter_shape=self.filter_shape, 
-                            image_shape=self.image_shape,
-                            subsample=(convstride, convstride),
-                            pad=padsize,
-                            )
+                conv2d(input=input[:, :self.channel / 2, :, :],
+                       filters=self.W0.val,
+                       filter_shape=self.filter_shape, 
+                       input_shape=self.image_shape,
+                       subsample=(convstride, convstride),
+                       border_mode=padsize,
+                       )
             conv_out0 = conv_out0 + self.b0.val.dimshuffle('x', 0, 'x', 'x')
 
             conv_out1 = \
-                conv.conv2d(input=input[:, self.channel / 2:, :, :],
-                            filters=self.W1.val,
-                            filter_shape=self.filter_shape, 
-                            image_shape=self.image_shape,
-                            subsample=(convstride, convstride),
-                            pad=padsize,
-                            )
+                conv2d(input=input[:, self.channel / 2:, :, :],
+                       filters=self.W1.val,
+                       filter_shape=self.filter_shape, 
+                       input_shape=self.image_shape,
+                       subsample=(convstride, convstride),
+                       border_mode=padsize,
+                       )
             conv_out1 = conv_out1 + self.b1.val.dimshuffle('x', 0, 'x', 'x')
 
             conv_out = T.concatenate([conv_out0, conv_out1], axis=1)
