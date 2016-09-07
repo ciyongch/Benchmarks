@@ -138,6 +138,7 @@ def train_net(config):
             if count == 20:
                 e = time.time()
                 print "time per 20 iter:", (e - s)
+                logger.info("time per 20 iter: %lf" % (e - s))
             cost_ij = train_model_wrap(train_model, shared_x,
                                        shared_y, rand_arr, img_mean,
                                        count, minibatch_index,

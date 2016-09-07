@@ -7,10 +7,13 @@ import theano.tensor as T
 
 # Jinlong added
 from theano.tensor.signal import downsample, norm
-from theano.tensor.nnet import conv
+from theano.tensor.nnet import conv2d
+from theano.tensor.nnet import conv_mkldnn, conversionOp, relu_mkldnn, norm_lrn_mkldnn
+from theano.tensor.signal import pool_mkldnn
 
 import warnings
 warnings.filterwarnings("ignore")
+uniq_id=0
 
 rng = np.random.RandomState(23455)
 # set a fixed number for 2 purpose:
@@ -79,6 +82,8 @@ class ConvPoolLayer(object):
         '''
         conv, pooling, relu and norm layers
         '''
+        global uniq_id
+        uniq_id+=1
 
         self.filter_size = filter_shape
         self.convstride = convstride
@@ -89,78 +94,44 @@ class ConvPoolLayer(object):
         self.lrn = lrn
         assert group in [1, 2]
 
-        self.filter_shape = np.asarray(filter_shape)
-        self.image_shape = np.asarray(image_shape)
+        if group == 2:
+            assert filter_shape[0] == group
 
-        if self.lrn:
-            #self.lrn_func = CrossChannelNormalization()
-            normOp = norm.NormAcrossMap(a=1e-4, b=0.75, N=5)
+        self.filter_shape = tuple(filter_shape)
+        self.image_shape = tuple(image_shape)
 
-        if group == 1:
-            self.W = Weight(self.filter_shape)
+        self.W = Weight(self.filter_shape)
+        
+        if group == 2:
+            self.b = Weight(self.filter_shape[1]*self.filter_shape[0], bias_init, std=0)
+        else:
             self.b = Weight(self.filter_shape[0], bias_init, std=0)
-        else:
-            self.filter_shape[0] = self.filter_shape[0] / 2
-            self.filter_shape[1] = self.filter_shape[1] / 2
-            self.image_shape[1] = self.image_shape[1] / 2
-            self.W0 = Weight(self.filter_shape)
-            self.W1 = Weight(self.filter_shape)
-            self.b0 = Weight(self.filter_shape[0], bias_init, std=0)
-            self.b1 = Weight(self.filter_shape[0], bias_init, std=0)
-
-        if group == 1:
-            conv_out = conv.conv2d( input=input,
-                                    filters=self.W.val,
-                                    filter_shape=self.filter_shape, 
-                                    image_shape=self.image_shape,
-                                    subsample=(convstride, convstride),
-                                    pad=padsize,
-                                    )
-            conv_out = conv_out + self.b.val.dimshuffle('x', 0, 'x', 'x')
-        else:
-            conv_out0 = \
-                conv.conv2d(input=input[:, :self.channel / 2, :, :],
-                            filters=self.W0.val,
-                            filter_shape=self.filter_shape, 
-                            image_shape=self.image_shape,
-                            subsample=(convstride, convstride),
-                            pad=padsize,
-                            )
-            conv_out0 = conv_out0 + self.b0.val.dimshuffle('x', 0, 'x', 'x')
-
-            conv_out1 = \
-                conv.conv2d(input=input[:, self.channel / 2:, :, :],
-                            filters=self.W1.val,
-                            filter_shape=self.filter_shape, 
-                            image_shape=self.image_shape,
-                            subsample=(convstride, convstride),
-                            pad=padsize,
-                            )
-            conv_out1 = conv_out1 + self.b1.val.dimshuffle('x', 0, 'x', 'x')
-
-            conv_out = T.concatenate([conv_out0, conv_out1], axis=1)
+ 
+        conv_out = conv_mkldnn.conv_forward(subsample=(convstride, convstride),
+                                            border_mode=padsize,
+                                            imshp=self.image_shape,
+                                            kshp=self.filter_shape,
+                                            uniq_id=uniq_id)(input, self.W.val, self.b.val)
 
         # ReLu
-        self.output = T.maximum(conv_out, 0)
+        #self.output = T.maximum(conv_out, 0)
 
-        # Pooling
-        if self.poolsize != 1:
-            self.output = downsample.max_pool_2d(input=self.output,
-                                        ds=(poolsize, poolstride),
-                                        st=(poolstride, poolstride),
-                                        ignore_border=True)
+        self.output = conv_out
+        reluOp = relu_mkldnn.Relu(uniq_id=uniq_id)
+        self.output = reluOp(self.output)
 
         # LRN
         if self.lrn:
-            #self.output = self.lrn_func(self.output)
-            self.output = normOp(self.output)[0]
+            normOp = norm_lrn_mkldnn.NormAcrossMap(alpha=1e-4, beta=0.75, n=5, k=1, uniq_id=uniq_id)
+            self.output = normOp(self.output)
 
-        if group == 1:
-            self.params = [self.W.val, self.b.val]
-            self.weight_type = ['W', 'b']
-        else:
-            self.params = [self.W0.val, self.b0.val, self.W1.val, self.b1.val]
-            self.weight_type = ['W', 'b', 'W', 'b']
+        # Pooling
+        if self.poolsize != 1:
+            poolOp = pool_mkldnn.Pool(ds=(poolsize, poolsize), st=(poolstride, poolstride), ignore_border=True, uniq_id=uniq_id)
+            self.output = poolOp(self.output)
+
+        self.params = [self.W.val, self.b.val]
+        self.weight_type = ['W', 'b']
 
         print "conv layer with shape_in: {}".format(str(image_shape))
 
@@ -172,6 +143,7 @@ class FCLayer(object):
         self.b = Weight(n_out, mean=0.1, std=0)
         self.input = input
         lin_output = T.dot(self.input, self.W.val) + self.b.val
+        #relu
         self.output = T.maximum(lin_output, 0)
         self.params = [self.W.val, self.b.val]
         self.weight_type = ['W', 'b']
