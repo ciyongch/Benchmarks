@@ -28,8 +28,8 @@ weight_decay: 0.0005 # def: 0.0005
 # Directories
 #label_folder: /data/tmp/ciyong/Image100/labels/
 #mean_file: /data/tmp/ciyong/Image100/misc/img_mean.npy
-label_folder: /data/tmp/ciyong/imagenet/parsed_data/labels/
-mean_file: /data/tmp/ciyong/imagenet/parsed_data/misc/img_mean.npy
+label_folder: imagenet/parsed_data/labels/
+mean_file: imagenet/parsed_data/misc/img_mean.npy
 weights_dir: ./weight/  # directory for saving weights and results
 
 snapshot_freq: 1  # frequency of saving weights
