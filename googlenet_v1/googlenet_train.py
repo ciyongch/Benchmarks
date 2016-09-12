@@ -63,7 +63,7 @@ def googlenet_train(train_batch_size=32, val_batch_size=50, image_size=(3, 224, 
 
         while(minibatch_index < n_train_batches):
             ####training
-            print(minibatch_index)
+            #print(minibatch_index)
             iter = epoch * n_train_batches + minibatch_index
             print('training @ epoch = %d : iter = %d : totoal_batches = %d' %(epoch, iter, n_train_batches))
             begin_time = time.time()
@@ -77,24 +77,22 @@ def googlenet_train(train_batch_size=32, val_batch_size=50, image_size=(3, 224, 
             error_ij = train_error()
             all_costs.append(cost_ij)
             all_errors.append(error_ij)
-            print('train_error%f' %(error_ij*100))
-            print('trian_cost%f' %(cost_ij))
+            print('train_error: %f %%' %(error_ij*100))
+            print('trian_cost: %f' %(cost_ij))
             end_time = time.time()
-            print('An iteration takes ', end_time - begin_time)
+            print('Time per iteration: %f' % (end_time - begin_time))
             if math.isnan(cost_ij):
                 nan_params = get_params(model.params)
                 common_save(nan_params, './nan_params')
                 sys.exit(0)
-            #end_time = time.time()
-            #print('A iteration costs %fs' %(end_time-begin_time))
 
             ###validation		 
-            if (iter) % (4*n_train_batches) == 0:
+            if (iter+1) % (4*n_train_batches) == 0:
                 validation_erorrs = []
                 validating_model.set_dropout_off()
 
                 for validation_index in xrange(0, n_val_batches):
-                    print('validation_index = %d : total_batches = %d' %(validation_index, n_val_batches))
+                    #print('validation_index = %d : total_batches = %d' %(validation_index, n_val_batches))
                     val_data, val_label = val_lmdb_iterator.next()
                     val_shared_x.set_value(val_data)
                     val_shared_y.set_value(val_label)
@@ -106,8 +104,8 @@ def googlenet_train(train_batch_size=32, val_batch_size=50, image_size=(3, 224, 
                       (epoch, minibatch_index + 1, n_train_batches,
                        this_validation_error * 100.))
 
-            ###save params
-            if (iter+1) % 1000 == 0:
+            ###save params every epoch
+            if (iter+1) % n_train_batches == 0:
                 net_params['model_params'] = get_params(model.params)
                 net_params['minibatch_index'] = minibatch_index
                 net_params['all_costs'] = all_costs
