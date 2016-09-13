@@ -90,8 +90,8 @@ class ConvPoolLayer(object):
 
         #self.filter_shape = np.asarray(filter_shape)
         #self.image_shape = np.asarray(image_shape)
-        self.filter_shape = tuple(filter_shape)
-        self.image_shape = tuple(image_shape)
+        self.filter_shape = list(filter_shape)
+        self.image_shape = list(image_shape)
 
         if self.lrn:
             #self.lrn_func = CrossChannelNormalization()
