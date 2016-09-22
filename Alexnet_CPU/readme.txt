@@ -1,1 +1,0 @@
-Alexnet-CPU benchmark
