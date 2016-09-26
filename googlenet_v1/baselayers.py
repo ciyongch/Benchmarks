@@ -27,8 +27,7 @@ class SoftmaxLayer(object):
         self.num_units = num_units
         num_input_channels = int(np.prod(self.input_shape[1:]))
         std = np.sqrt(2. / (num_input_channels + self.num_units))
-        np_values = np.asarray(
-                rng.normal(0, std, (num_input_channels, self.num_units)), dtype=theano.config.floatX)
+        np_values = np.asarray(rng.uniform(low=-std, high=std, size=(num_input_channels, self.num_units)), dtype=theano.config.floatX)
         self.W = theano.shared(value=np_values, name='W', borrow=True)
         b_values = np.zeros((self.num_units,), dtype=theano.config.floatX)
         self.b = theano.shared(value=b_values)
@@ -159,11 +158,11 @@ class Conv2DLayer(object):
         self.filter_shape = filter_shape
         self.convstride = (convstride,) * 2
         self.pad = (padsize,) * 2
-        fan_in = np.prod(filter_shape[1:])
-        fan_out = filter_shape[0] * np.prod(filter_shape[2:]) 
-        std = np.sqrt(2.0 / (fan_in + fan_out))
+        n1, n2 = filter_shape[:2]
+        receptive_field_size = np.prod(filter_shape[2:])
+        std = np.sqrt(2.0 / ((n1 + n2) * receptive_field_size))
         self.np_values = np.asarray(
-                rng.normal(0, std, filter_shape), dtype=theano.config.floatX)
+                rng.uniform(low=-std, high=std, size=filter_shape), dtype=theano.config.floatX)
         self.W = theano.shared(value=self.np_values, borrow=True)
         b_values = 0.2 * np.ones((filter_shape[0],), dtype=theano.config.floatX)
         self.b = theano.shared(value=b_values)       
@@ -433,10 +432,10 @@ class DenseLayer(object):
         self.num_units = num_units
         num_input_channels = int(np.prod(self.input_shape[1:]))
         std = np.sqrt(2. / (num_input_channels + self.num_units))
-        np_values = np.asarray(
-                rng.normal(0, std, (num_input_channels, self.num_units)), dtype=theano.config.floatX)
+        np_values = np.asarray(rng.uniform(low=-std, high=std, size=(num_input_channels, self.num_units)), dtype=theano.config.floatX)
         self.W = theano.shared(value=np_values)
         b_values = np.zeros((self.num_units,), dtype=theano.config.floatX)
+        b_values.fill(0.2)
         self.b = theano.shared(value=b_values)
         
         if input.ndim > 2:
