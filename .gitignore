@@ -8,5 +8,6 @@
 *.out
 *.bak
 *.pkl
+p_*
 .DS_Store
 build
