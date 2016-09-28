@@ -15,10 +15,6 @@ def aux_tower(input_layer, input_shape, mkldnn):
     params = []
     weight_types = []
 
-#    i2uOp = conversionOp.I2U(uniq_name=str(uniq_id))
-#    i2uout = i2uOp(input_layer)
-#    net['i2u'] = i2uout
-
     # input shape = (14x14x512or528)
     net['aux_tower_pool'] = AveragePool2DLayer(
     input_layer, input_shape, pool_size=5, stride=3, pad=0, ignore_border=False,mkldnn=mkldnn)
@@ -30,7 +26,6 @@ def aux_tower(input_layer, input_shape, mkldnn):
     params +=  [net['aux_tower_1x1'].W, net['aux_tower_1x1'].b]
     weight_types += net['aux_tower_1x1'].weight_types
     output_shape = net['aux_tower_1x1'].get_output_shape_for()
-
     
     if mkldnn:
         i2uOp = conversionOp.I2U(uniq_name=str(uniq_id))
@@ -39,17 +34,12 @@ def aux_tower(input_layer, input_shape, mkldnn):
     else:
         i2uout = net['aux_tower_1x1'].output   
     
-
-    #net['aux_flatten'] = FlattenLayer(net['aux_tower_1x1'].output, output_shape)
-    #output_shape = net['aux_flatten'].get_output_shape_for()
-    
     # output shape = (2048)
     net['FC_1'] = DenseLayer(i2uout, output_shape, 1024)
     params +=  [net['FC_1'].W, net['FC_1'].b]
     weight_types += net['FC_1'].weight_types
     output_shape = net['FC_1'].get_output_shape_for()
          
-    #drp = Dropout(input=fc.output,n_in=1024, n_out=1024, prob_drop=0.7)
     net['aux_dropout'] = DropoutLayer(net['FC_1'].output, output_shape, prob_drop=0.7)
     output_shape = net['aux_dropout'].get_output_shape_for()
 

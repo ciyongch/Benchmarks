@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Jul 08 08:55:51 2016
-
-@author: lilu
-"""
-
 import sys
 
 import numpy as np
@@ -45,9 +39,6 @@ class SoftmaxLayer(object):
         self.params = [self.W, self.b]
         self.weight_types = ['W', 'b']
         
-       # print 'softmax layer with num_in: ' + str(input_shape[1]) + \
-       #     ' num_out: ' + str(self.num_units)
-
     def negative_log_likelihood(self, y):
         return -T.mean(T.log(self.p_y_given_x)[T.arange(y.shape[0]), y])
     

@@ -72,21 +72,3 @@ def save_net_state(net_params):
         pickle.dump(net_params, f, -1)
         f.close()
         print('Net_params saved sucessfully!')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

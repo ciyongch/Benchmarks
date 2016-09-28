@@ -95,5 +95,3 @@ def get_image_shape(lmdb_file):
     cursor.close()
     lmdb_data.close()
     return (image_channels, image_height, image_width)
-
-
