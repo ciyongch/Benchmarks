@@ -15,7 +15,7 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(message)s',
                     datefmt='%y-%m-%d %H:%M:%S',
-                    filename='./temp/alexnet_time.log',
+                    filename='./alexnet_time_tmp.log',
                     filemode='w')
 # define a Handler which writes INFO messages or higher to the sys.stderr
 console = logging.StreamHandler()
@@ -74,22 +74,17 @@ def train_net(config):
     (train_model, validate_model, train_error, learning_rate,
         shared_x, shared_y, rand_arr, vels) = compile_models(model, config, flag_top_5=flag_top5)
 
-
     ######################### TRAIN MODEL ################################
 
     print '... training'
 
-    #print shared_x.type
     if flag_para_load:
-        # [2015-10-21]
-        # Jinlong added to support parallel load for CPU version
+        # added to support parallel load for CPU version
         sock.send_pyobj((shared_x))
         load_send_queue.put(img_mean)
 
     n_train_batches = len(train_filenames)
     minibatch_range = range(n_train_batches)
-
-
 
     # Start Training Loop
     epoch = 0
@@ -99,26 +94,20 @@ def train_net(config):
         epoch = epoch + 1
 
         if config['shuffle']:
-	    print ('shuffle')
             np.random.shuffle(minibatch_range)
 
         if config['resume_train'] and epoch == 1:
-	    print ('config')
             load_epoch = config['load_epoch']
             load_weights(layers, config['weights_dir'], load_epoch)
-            #print layers[0].params[1].get_value()
-            #sys.exit(0)
-            epoch = load_epoch + 1
             lr_to_load = np.load(
                 config['weights_dir'] + 'lr_' + str(load_epoch) + '.npy')
+            learning_rate.set_value(lr_to_load)
             #val_record = list(
             #    np.load(config['weights_dir'] + 'val_record.npy'))
-            learning_rate.set_value(lr_to_load)
             load_momentums(vels, config['weights_dir'], load_epoch)
-            #load_momentums(vels, config['weights_dir'], epoch)
+            epoch = load_epoch + 1
 
         if flag_para_load:
-	    print ('flag_para_load')
             # send the initial message to load data, before each epoch
             load_send_queue.put(str(train_filenames[minibatch_range[0]]))
             load_send_queue.put(get_rand3d())
@@ -152,10 +141,8 @@ def train_net(config):
             #print shared_x.get_value(borrow=True)
 
             if num_iter % config['print_freq'] == 0:
-                #print 'training @ iter = ', num_iter
-                #print 'training cost:', cost_ij
-		logger.info("training @ iter = %i" % (num_iter)) 
-		logger.info("training cost: %lf" % (cost_ij)) 
+                logger.info("training @ iter = %i" % (num_iter)) 
+                logger.info("training cost: %lf" % (cost_ij)) 
                 if config['print_train_error']:
                     logger.info('training error rate: %lf' % train_error())
                     #print 'training error rate:', train_error()
@@ -239,9 +226,4 @@ if __name__ == '__main__':
         load_proc.join()
 
     else:
-        """
-        train_proc = Process(target=train_net, args=(config,))
-        train_proc.start()
-        train_proc.join()
-        """
         train_net(config) # For theano profiling

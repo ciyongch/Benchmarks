@@ -6,7 +6,6 @@ import yaml
 import numpy as np
 import zmq
 
-# Jinlong added: 2015-10-27
 import logging
 # set up logging to file - see previous section for more details
 
@@ -57,7 +56,7 @@ def train_net(config):
     import theano
     theano.config.on_unused_input = 'warn'
 
-    if config['flag_top_5']:    # Jinlong added 2015-10-30
+    if config['flag_top_5']:
         flag_top5 = True
     else:
         flag_top5 = False 
@@ -74,22 +73,17 @@ def train_net(config):
     (train_model, validate_model, train_error, learning_rate,
         shared_x, shared_y, rand_arr, vels) = compile_models(model, config, flag_top_5=flag_top5)
 
-
     ######################### TRAIN MODEL ################################
 
     print '... training'
 
-    #print shared_x.type
     if flag_para_load:
-        # [2015-10-21]
-        # Jinlong added to support parallel load for CPU version
+        # added to support parallel load for CPU version
         sock.send_pyobj((shared_x))
         load_send_queue.put(img_mean)
 
     n_train_batches = len(train_filenames)
     minibatch_range = range(n_train_batches)
-
-
 
     # Start Training Loop
     epoch = 0
@@ -99,26 +93,20 @@ def train_net(config):
         epoch = epoch + 1
 
         if config['shuffle']:
-	    print ('shuffle')
             np.random.shuffle(minibatch_range)
 
         if config['resume_train'] and epoch == 1:
-	    print ('config')
             load_epoch = config['load_epoch']
             load_weights(layers, config['weights_dir'], load_epoch)
-            #print layers[0].params[1].get_value()
-            #sys.exit(0)
-            epoch = load_epoch + 1
             lr_to_load = np.load(
                 config['weights_dir'] + 'lr_' + str(load_epoch) + '.npy')
+            learning_rate.set_value(lr_to_load)
             #val_record = list(
             #    np.load(config['weights_dir'] + 'val_record.npy'))
-            learning_rate.set_value(lr_to_load)
             load_momentums(vels, config['weights_dir'], load_epoch)
-            #load_momentums(vels, config['weights_dir'], epoch)
+            epoch = load_epoch + 1
 
         if flag_para_load:
-	    print ('flag_para_load')
             # send the initial message to load data, before each epoch
             load_send_queue.put(str(train_filenames[minibatch_range[0]]))
             load_send_queue.put(get_rand3d())
@@ -127,7 +115,6 @@ def train_net(config):
             load_send_queue.put('calc_finished')
 
         count = 0
-        #for minibatch_index in minibatch_range[:1]:
         for minibatch_index in minibatch_range:
 
             num_iter = (epoch - 1) * n_train_batches + count
@@ -149,30 +136,22 @@ def train_net(config):
                                        send_queue=load_send_queue,
                                        recv_queue=load_recv_queue)
 
-            #print shared_x.get_value(borrow=True)
-
             if num_iter % config['print_freq'] == 0:
-                #print 'training @ iter = ', num_iter
-                #print 'training cost:', cost_ij
-		logger.info("training @ iter = %i" % (num_iter)) 
-		logger.info("training cost: %lf" % (cost_ij)) 
+                logger.info("training @ iter = %i" % (num_iter)) 
+                logger.info("training cost: %lf" % (cost_ij)) 
                 if config['print_train_error']:
                     logger.info('training error rate: %lf' % train_error())
-                    #print 'training error rate:', train_error()
 
             if flag_para_load and (count < len(minibatch_range)):
                 load_send_queue.put('calc_finished')
 
         ############### Test on Validation Set ##################
-
-        #"""
         DropoutLayer.SetDropoutOff()
 
         # result_list = [ this_validation_error, this_validation_error_top5, this_validation_loss ]
         # or
         # result_list = [ this_validation_error, this_validation_loss ]
         result_list = get_val_error_loss(
-        #this_validation_error, this_validation_loss = get_val_error_loss(
             rand_arr, shared_x, shared_y,
             val_filenames, val_labels,
             flag_para_load, img_mean,
@@ -184,18 +163,13 @@ def train_net(config):
 
         logger.info(('epoch %i: validation loss %f ' %
               (epoch, result_list[-1])))
-        #print('epoch %i: validation loss %f ' %
-        #      (epoch, this_validation_loss))
         if flag_top5:
             logger.info(('epoch %i: validation error (top 1) %f %%, (top5) %f %%' %
                 (epoch,  result_list[0] * 100., result_list[1] * 100.)))
         else:
             logger.info(('epoch %i: validation error %f %%' %
                 (epoch, result_list[0] * 100.)))
-        #print('epoch %i: validation error %f %%' %
-        #      (epoch, this_validation_error * 100.))
         val_record.append(result_list)
-        #val_record.append([this_validation_error, this_validation_loss])
         np.save(config['weights_dir'] + 'val_record.npy', val_record)
 
         DropoutLayer.SetDropoutOn()
@@ -211,7 +185,6 @@ def train_net(config):
             np.save(config['weights_dir'] + 'lr_' + str(epoch) + '.npy',
                        learning_rate.get_value())
             save_momentums(vels, config['weights_dir'], epoch)
-        #"""
 
     print('Optimization complete.')
 
@@ -239,9 +212,4 @@ if __name__ == '__main__':
         load_proc.join()
 
     else:
-        """
-        train_proc = Process(target=train_net, args=(config,))
-        train_proc.start()
-        train_proc.join()
-        """
         train_net(config) # For theano profiling

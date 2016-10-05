@@ -3,7 +3,7 @@ sys.path.append('./lib')
 import theano
 theano.config.on_unused_input = 'warn'
 import theano.tensor as T
-from theano.tensor.nnet import conv_mkldnn, conversionOp
+from theano.tensor.nnet import conversionOp
 
 import numpy as np
 

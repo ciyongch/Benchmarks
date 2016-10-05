@@ -4,8 +4,7 @@ resume_train: False
 load_epoch: 20
 
 # Learning Parameters
-#n_epochs: 100
-n_epochs: 100
+n_epochs: 90
 learning_rate: 0.01  # def:0.01
 lr_policy: step  # def: step or auto
 lr_adapt_threshold: 0.01

@@ -30,7 +30,7 @@ def googlenet_train(batch_size=256, image_size=(3, 224, 224), n_epochs=60, mkldn
     model = googlenet(input_shape, mkldnn)
 
     (train_model, validate_model, train_error,
-        shared_x, shared_y, shared_lr) = compile_models(model, batch_size = batch_size)
+        shared_x, shared_y, shared_lr, vels) = compile_models(model, batch_size = batch_size)
 
     images = np.random.random_integers(0, 255, input_shape).astype('float32')
     labels = np.random.random_integers(0, 999, batch_size).astype('int32')

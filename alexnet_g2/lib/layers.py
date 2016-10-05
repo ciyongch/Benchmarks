@@ -5,7 +5,6 @@ import theano
 import theano.tensor as T
 #from pylearn2.expr.normalize import CrossChannelNormalization
 
-# Jinlong added
 from theano.tensor.signal import downsample, norm
 from theano.tensor.nnet import conv2d
 from theano.tensor.nnet import conv_mkldnn, conversionOp, relu_mkldnn, norm_lrn_mkldnn
@@ -13,7 +12,7 @@ from theano.tensor.signal import pool_mkldnn
 
 import warnings
 warnings.filterwarnings("ignore")
-uniq_id=1
+uniq_id=0
 
 rng = np.random.RandomState(23455)
 # set a fixed number for 2 purpose:
@@ -77,7 +76,7 @@ class DataLayer(object):
 class ConvPoolLayer(object):
 
     def __init__(self, input, image_shape, filter_shape, convstride, padsize,
-                 group, poolsize, poolstride, bias_init, lrn=False, layer_idx=1,
+                 group, poolsize, poolstride, bias_init, lrn=False,
                  ):
         '''
         conv, pooling, relu and norm layers
@@ -108,8 +107,6 @@ class ConvPoolLayer(object):
                                             uniq_id=uniq_id)(input, self.W.val, self.b.val)
 
         # ReLu
-        #self.output = T.maximum(conv_out, 0)
-
         self.output = conv_out
         reluOp = relu_mkldnn.Relu(uniq_id=uniq_id)
         self.output = reluOp(self.output)
@@ -146,13 +143,13 @@ class FCLayer(object):
 
 class DropoutLayer(object):
     seed_common = np.random.RandomState(0)  # for deterministic results
-    # seed_common = np.random.RandomState()
     layers = []
 
     def __init__(self, input, n_in, n_out, prob_drop=0.5):
 
         self.prob_drop = prob_drop
         self.prob_keep = 1.0 - prob_drop
+        self.scale = 1.0 / self.prob_keep
         self.flag_on = theano.shared(np.cast[theano.config.floatX](1.0))
         self.flag_off = 1.0 - self.flag_on
 
@@ -161,8 +158,8 @@ class DropoutLayer(object):
         self.mask = mask_rng.binomial(n=1, p=self.prob_keep, size=input.shape)
 
         self.output = \
-            self.flag_on * T.cast(self.mask, theano.config.floatX) * input + \
-            self.flag_off * self.prob_keep * input
+            self.flag_on * self.scale * T.cast(self.mask, theano.config.floatX) * input + \
+            self.flag_off * input
 
         DropoutLayer.layers.append(self)
 

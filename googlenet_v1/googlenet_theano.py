@@ -302,7 +302,7 @@ class googlenet(object):
 
         self.net = net
         self.params = params
-        print ("Total Params ",len(self.params))
+        #print ("Total Params ",len(self.params))
         self.weight_types = weight_types
 
         self.cost = net['loss3/classifier'].negative_log_likelihood(y) + np.float32(0.3)*negative_log_likelihood_1(y) + np.float32(0.3)*negative_log_likelihood_2(y)
@@ -390,7 +390,7 @@ def compile_models(model, learning_rate=0.01, batch_size=256, image_size=(3, 224
         [], errors, givens=[(x, shared_x), (y, shared_y)])
 
     return (train_model, validate_model, train_error,
-            shared_x, shared_y, learning_rate)
+            shared_x, shared_y, learning_rate, vels)
 
 ####derived from caffe googlenet prototxt           
 def set_learning_rate(shared_lr, iter):

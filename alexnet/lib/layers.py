@@ -159,6 +159,7 @@ class DropoutLayer(object):
 
         self.prob_drop = prob_drop
         self.prob_keep = 1.0 - prob_drop
+        self.scale = 1.0 / self.prob_keep
         self.flag_on = theano.shared(np.cast[theano.config.floatX](1.0))
         self.flag_off = 1.0 - self.flag_on
 
@@ -167,8 +168,8 @@ class DropoutLayer(object):
         self.mask = mask_rng.binomial(n=1, p=self.prob_keep, size=input.shape)
 
         self.output = \
-            self.flag_on * T.cast(self.mask, theano.config.floatX) * input + \
-            self.flag_off * self.prob_keep * input
+            self.flag_on * self.scale * T.cast(self.mask, theano.config.floatX) * input + \
+            self.flag_off * input
 
         DropoutLayer.layers.append(self)
 
